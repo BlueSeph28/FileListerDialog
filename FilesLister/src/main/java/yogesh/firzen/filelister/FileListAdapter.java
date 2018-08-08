@@ -20,8 +20,6 @@ import java.util.Comparator;
 import java.util.LinkedList;
 import java.util.List;
 
-import yogesh.firzen.mukkiasevaigal.M;
-import yogesh.firzen.mukkiasevaigal.S;
 
 /**
  * Created by root on 9/7/17.
@@ -37,6 +35,7 @@ class FileListerAdapter extends RecyclerView.Adapter<FileListerAdapter.FileListH
     private Context context;
     private FilesListerView listerView;
     private boolean unreadableDir;
+    private GlobalBus globalBus;
 
 
     FileListerAdapter(File defaultDir, FilesListerView view) {
@@ -124,14 +123,7 @@ class FileListerAdapter extends RecyclerView.Adapter<FileListerAdapter.FileListH
                     switch (getFileFilter()) {
                         case ALL_FILES:
                             return true;
-                        case AUDIO_ONLY:
-                            return S.isAudio(file) || file.isDirectory();
-                        case IMAGE_ONLY:
-                            return S.isImage(file) || file.isDirectory();
-                        case VIDEO_ONLY:
-                            return S.isVideo(file) || file.isDirectory();
-                        case DIRECTORY_ONLY:
-                            return file.isDirectory();
+
                     }
                     return false;
                 }
@@ -140,7 +132,7 @@ class FileListerAdapter extends RecyclerView.Adapter<FileListerAdapter.FileListH
                 fs = new LinkedList<>(Arrays.asList(files));
             }
         }
-        M.L("From FileListAdapter", fs);
+
         data = new LinkedList<>(fs);
         Collections.sort(data, new Comparator<File>() {
             @Override
@@ -183,31 +175,28 @@ class FileListerAdapter extends RecyclerView.Adapter<FileListerAdapter.FileListH
         if (f != null) {
             holder.name.setText(f.getName());
         } else if (!unreadableDir) {
-            holder.name.setText("Create a new Folder here");
-            holder.icon.setImageResource(R.drawable.ic_create_new_folder_black_48dp);
+            /*holder.name.setText("Create a new Folder here");
+            holder.icon.setImageResource(R.drawable.ic_create_new_folder_black_48dp);*/
+
+            holder.name.setVisibility(View.GONE);
+            holder.icon.setVisibility(View.GONE);
         }
         if (unreadableDir) {
             if (f != null) {
                 if (position == 0) {
-                    holder.name.setText(f.getName() + " (Internal)");
+                    holder.name.setText(f.getName() + " (" + getContext().getString(R.string.internal_text) + ")");
                 } else {
-                    holder.name.setText(f.getName() + " (External)");
+                    holder.name.setText(f.getName() + " (" + getContext().getString(R.string.external_text) + ")");
                 }
             }
         }
         if (position == 0 && f != null && !unreadableDir) {
-            holder.icon.setImageResource(R.drawable.ic_subdirectory_up_black_48dp);
+            holder.icon.setImageResource(R.drawable.ic_return_button);
         } else if (f != null) {
             if (f.isDirectory())
-                holder.icon.setImageResource(R.drawable.ic_folder_black_48dp);
-            else if (S.isImage(f))
-                holder.icon.setImageResource(R.drawable.ic_photo_black_48dp);
-            else if (S.isVideo(f))
-                holder.icon.setImageResource(R.drawable.ic_videocam_black_48dp);
-            else if (S.isAudio(f))
-                holder.icon.setImageResource(R.drawable.ic_audiotrack_black_48dp);
+                holder.icon.setImageResource(R.drawable.ic_record);
             else
-                holder.icon.setImageResource(R.drawable.ic_insert_drive_file_black_48dp);
+                holder.icon.setImageResource(R.drawable.ic_document);
         }
     }
 
@@ -257,11 +246,9 @@ class FileListerAdapter extends RecyclerView.Adapter<FileListerAdapter.FileListH
                     public void onClick(View v) {
                         String name = editText.getText().toString();
                         if (TextUtils.isEmpty(name)) {
-                            M.T(getContext(), "Please enter a valid folder name");
                         } else {
                             File file = new File(selectedFile, name);
                             if (file.exists()) {
-                                M.T(getContext(), "This folder already exists.\n Please provide another name for the folder");
                             } else {
                                 dialog.dismiss();
                                 file.mkdirs();
@@ -273,10 +260,10 @@ class FileListerAdapter extends RecyclerView.Adapter<FileListerAdapter.FileListH
             } else {
                 File f = data.get(getPosition());
                 selectedFile = f;
-                M.L("From FileLister", f.getAbsolutePath());
                 if (f.isDirectory()) {
                     fileLister(f);
                 } else {
+                    GlobalBus.getBus().post(new Events.Selected("UPDATE"));
                 }
             }
         }
